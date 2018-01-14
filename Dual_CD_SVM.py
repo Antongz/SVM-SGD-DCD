@@ -30,29 +30,34 @@ class DCD_SVM():
         # self.Q = np.dot(temp_Q, np.transpose(temp_Q))
 
         self.alpha = np.zeros(X_size) # initialize alpha
+        self.Gradient = np.ones(X_size)
 
         self.beta = np.dot(np.multiply(self.alpha, y), X)
 
+
         i = 0
-        while not self._check_optimality() and i < 100000:
+        # while not self._check_optimality() and i < 100000:
+        while not all(np.isclose(self.Gradient,0)) and i <100:
+        # while i <100000:
             i += 1
-            ind = rd.randint(0, X_size-1)
+            for ind in range(0, X_size-1):
 
-            temp_alpha = self.alpha[ind]
-            Gradient = y[ind]* np.dot(self.beta, X[ind,]) - 1
+                temp_alpha = self.alpha[ind]
+                self.Gradient[ind] = y[ind]* np.dot(self.beta, X[ind,]) - 1
 
-            # print Gradient
+                # print self.Gradient[ind]
 
-            if temp_alpha == 0:
-                Proj_Gradient = min(Gradient, 0)
-            elif temp_alpha == self.C:
-                Proj_Gradient = max(Gradient, 0)
-            elif 0 < temp_alpha < self.C:
-                Proj_Gradient = Gradient
+                if temp_alpha == 0:
+                    Proj_Gradient = min(self.Gradient[ind], 0)
+                elif temp_alpha == self.C:
+                    Proj_Gradient = max(self.Gradient[ind], 0)
+                elif 0 < temp_alpha < self.C:
+                    Proj_Gradient = self.Gradient[ind]
 
-            if not np.isclose(Proj_Gradient, 1e-9):
-                self.alpha[ind] = min(max(temp_alpha - Gradient/ Q_ii[ind], 0), self.C)
-                self.beta = self.beta + y[ind]*(self.alpha[ind] - temp_alpha)*X[ind,]
+                if not np.isclose(Proj_Gradient, 1e-9):
+                    self.alpha[ind] = min(max(temp_alpha - self.Gradient[ind]/ Q_ii[ind], 0), self.C)
+                    self.beta = self.beta + y[ind]*(self.alpha[ind] - temp_alpha)*X[ind,]
+        self._check_optimality()
 
     def _check_optimality(self):
         """
@@ -98,6 +103,6 @@ if __name__ == '__main__':
 
     svm = DCD_SVM(C=1)
     svm.fit(X,y)
-    
+
     print svm.gap
     print svm.accuracy()
