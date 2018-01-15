@@ -14,7 +14,7 @@ class DCD_SVM():
         self.alpha = None # dual variables
         self.beta = None # primal vaiables
         self.C = C
-        self.duality_gap_tol = 1e-1
+        self.duality_gap_tol = 1e-3
 
         self.gradient_gap_tol = 1e-6
 
@@ -40,7 +40,7 @@ class DCD_SVM():
 
 
         i = 0
-        while not self._check_optimality(method='duality_gap') and i < 100000:
+        while not self._check_optimality(method='duality_gap') and i < 100:
         # while not all(np.isclose(self.Proj_grad,0)) and i <500000:
         # while i <100000:
             i += 1
