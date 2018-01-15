@@ -44,24 +44,23 @@ class DCD_SVM():
         # while not all(np.isclose(self.Proj_grad,0)) and i <500000:
         # while i <100000:
             i += 1
-            ind = rd.randint(0, X_size-1)
+            ind_permuted = np.random.permutation(X_size)
+            for ind in ind_permuted:
+                temp_alpha = self.alpha[ind]
+                self.Gradient[ind] = y[ind]* np.dot(self.beta, X[ind,]) - 1
 
-            temp_alpha = self.alpha[ind]
-            self.Gradient[ind] = y[ind]* np.dot(self.beta, X[ind,]) - 1
+                # print self.Gradient[ind]
 
-            # print self.Gradient[ind]
+                if temp_alpha == 0:
+                    self.Proj_grad[ind] = min(self.Gradient[ind], 0)
+                elif temp_alpha == self.C:
+                    self.Proj_grad[ind] = max(self.Gradient[ind], 0)
+                elif 0 < temp_alpha < self.C:
+                    self.Proj_grad[ind] = self.Gradient[ind]
 
-            if temp_alpha == 0:
-                self.Proj_grad[ind] = min(self.Gradient[ind], 0)
-            elif temp_alpha == self.C:
-                self.Proj_grad[ind] = max(self.Gradient[ind], 0)
-            elif 0 < temp_alpha < self.C:
-                self.Proj_grad[ind] = self.Gradient[ind]
-
-            if not np.isclose(self.Proj_grad[ind], 1e-9):
-                self.alpha[ind] = min(max(temp_alpha - self.Gradient[ind]/ Q_ii[ind], 0), self.C)
-                # if temp_alpha != self.alpha[ind]:
-                self.beta = self.beta + y[ind]*(self.alpha[ind] - temp_alpha)*X[ind,]
+                if not np.isclose(self.Proj_grad[ind], 1e-9):
+                    self.alpha[ind] = min(max(temp_alpha - self.Gradient[ind]/ Q_ii[ind], 0), self.C)
+                    self.beta = self.beta + y[ind]*(self.alpha[ind] - temp_alpha)*X[ind,]
         print i
         self._duality_gap()
 
