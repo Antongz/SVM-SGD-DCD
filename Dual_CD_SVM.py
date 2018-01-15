@@ -14,6 +14,9 @@ class DCD_SVM():
         self.alpha = None # dual variables
         self.beta = None # primal vaiables
         self.C = C
+        self.duality_gap_tol = 1e-1
+
+        self.gradient_gap_tol = 1e-6
 
     def fit(self, X, y):
         """
@@ -31,49 +34,81 @@ class DCD_SVM():
 
         self.alpha = np.zeros(X_size) # initialize alpha
         self.Gradient = np.ones(X_size)
+        self.Proj_grad = np.random.uniform(-1,1,X_size)
 
         self.beta = np.dot(np.multiply(self.alpha, y), X)
 
 
         i = 0
-        # while not self._check_optimality() and i < 100000:
-        while not all(np.isclose(self.Gradient,0)) and i <100:
+        while not self._check_optimality(method='duality_gap') and i < 100000:
+        # while not all(np.isclose(self.Proj_grad,0)) and i <500000:
         # while i <100000:
             i += 1
-            for ind in range(0, X_size-1):
+            ind = rd.randint(0, X_size-1)
 
-                temp_alpha = self.alpha[ind]
-                self.Gradient[ind] = y[ind]* np.dot(self.beta, X[ind,]) - 1
+            temp_alpha = self.alpha[ind]
+            self.Gradient[ind] = y[ind]* np.dot(self.beta, X[ind,]) - 1
 
-                # print self.Gradient[ind]
+            # print self.Gradient[ind]
 
-                if temp_alpha == 0:
-                    Proj_Gradient = min(self.Gradient[ind], 0)
-                elif temp_alpha == self.C:
-                    Proj_Gradient = max(self.Gradient[ind], 0)
-                elif 0 < temp_alpha < self.C:
-                    Proj_Gradient = self.Gradient[ind]
+            if temp_alpha == 0:
+                self.Proj_grad[ind] = min(self.Gradient[ind], 0)
+            elif temp_alpha == self.C:
+                self.Proj_grad[ind] = max(self.Gradient[ind], 0)
+            elif 0 < temp_alpha < self.C:
+                self.Proj_grad[ind] = self.Gradient[ind]
 
-                if not np.isclose(Proj_Gradient, 1e-9):
-                    self.alpha[ind] = min(max(temp_alpha - self.Gradient[ind]/ Q_ii[ind], 0), self.C)
-                    self.beta = self.beta + y[ind]*(self.alpha[ind] - temp_alpha)*X[ind,]
-        self._check_optimality()
+            if not np.isclose(self.Proj_grad[ind], 1e-9):
+                self.alpha[ind] = min(max(temp_alpha - self.Gradient[ind]/ Q_ii[ind], 0), self.C)
+                # if temp_alpha != self.alpha[ind]:
+                self.beta = self.beta + y[ind]*(self.alpha[ind] - temp_alpha)*X[ind,]
+        print i
+        self._duality_gap()
 
-    def _check_optimality(self):
-        """
-        Check optimality condition using duality gap
-        """
-
+    def _duality_gap(self):
         dual_obj = -0.5* np.dot(self.beta, self.beta) + np.sum(self.alpha)
 
         prim_obj = 0.5* np.dot(self.beta, self.beta) + self.C * np.sum( np.maximum(1 - np.multiply(np.dot(self.X, self.beta), self.y), 0))
 
-        # print (prim_obj - dual_obj)
+            # print (prim_obj - dual_obj)
         self.gap = prim_obj - dual_obj
-        if self.gap <= 1e-6:
-            return True
-        else:
-            return False
+
+    def _check_optimality(self, method):
+        """
+        Check optimality condition using duality gap
+        params:
+            method: str,'duality_gap'; 
+                    'gradient': check if all projected gradient are close to 0
+                    'gradient_gap': check if the difference between largest and smallest projected gradients are less than a tolerance
+        """
+        if method == 'duality_gap':
+            self._duality_gap()
+            # print self.gap
+            
+            if self.gap <= self.duality_gap_tol:
+
+                return True
+            else:
+                return False
+        elif method == 'gradient':
+            return all(np.isclose(self.Proj_grad,0))
+        elif method == 'gradient_gap':
+            gap = max(self.Proj_grad) - min(self.Proj_grad)
+
+            if gap <= self.gradient_gap_tol:
+                return True
+            else:
+                return False
+
+    def _shrinking(self):
+        tol_shrink = max(1, 10*self.gradient_gap_tol)
+        start_from_all = True
+
+        active_alpha_ind = range(0, len(self.alpha))
+
+        # while i <100000:
+
+        return None
 
     def predict(self):
         return None
