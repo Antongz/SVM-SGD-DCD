@@ -6,6 +6,8 @@
 import numpy as np
 import random as rd
 import pandas as pd
+from dynamic_plot import dynamic_plot
+from sklearn.model_selection import StratifiedKFold
 
 
 class bilevel_SGD():
@@ -16,7 +18,7 @@ class bilevel_SGD():
         self.beta = None
         self.C_min = 1e-4
         self.C_max = 1e6
-        self.t_max = 1000 # maximal number of iterations
+        self.t_max = 2000 # maximal number of iterations
         self.lr_beta = 0.01 # learning rate (step size) for beta
         self.lr_C = 0.01 # learning rate for C
 
@@ -48,13 +50,15 @@ class bilevel_SGD():
         self.beta = np.random.uniform(-1, 1, (self.fold_num, feature_size))
 
         t = 1
-        print self.stop()
+        # print self.stop()
+        dp = dynamic_plot(xlim=(0,self.t_max), ylim=(0, 1.1), xlabel = 'Iteration', ylabel = 'Accuracy')
         while (self.stop() < self.accuracy_threshold) and (t <= self.t_max):
             C_grad_ls = []
             for i, index in enumerate(self.indice_gen):
                 
                 train_index = index[0]
                 test_index = index[1]
+
                 X_train, X_valid = X[train_index], X[test_index]
                 y_train, y_valid = y[train_index], y[test_index]
 
@@ -64,18 +68,22 @@ class bilevel_SGD():
                 l = np.random.choice(np.where(error_vector_t<1)[0])
                 p = np.random.choice(np.where(error_vector_v<1)[0])
 
+
                 # update lower level gradient
                 G_grad =  self.beta[i,] - self.C*y_train[l]*X_train[l,]
                 self.beta[i,] = self.beta[i,] - self.lr_beta*G_grad
 
                 # update upper level gradient
                 C_grad_ls.append(- np.dot(y_valid[p]*X_valid[p,], y_train[l]*X_train[l,]))
+            # print 't', t
+            # print C_grad_ls
 
             C_grad = sum(C_grad_ls)/self.fold_num
 
-            # print C_grad
+            # print 'C_grad', C_grad
             
             # print self.beta
+            self.lr_C = 1/np.absolute(t*np.sqrt(feature_size)*C_grad)
 
             self.C = self.C - self.lr_C*C_grad
 
@@ -84,8 +92,10 @@ class bilevel_SGD():
             if self.C > self.C_max:
                 self.C = self.C_max
 
-            print self.stop()
+            # print self.stop()
             # print self.C
+
+            dp.update_line(t, self.stop())
 
             t += 1
 
@@ -122,36 +132,45 @@ class bilevel_SGD():
 
         return sum(y_true==y_pred)*1.0/len(y_true)
 
-
-if __name__ == '__main__':
-    from sklearn.model_selection import StratifiedKFold
-    # X = pd.read_csv('../OptimizationProject_Wei/adult_x.csv', header=None)
-    # y = pd.read_csv('../OptimizationProject_Wei/adult_y.csv', header=None)
+def cancer_data():
     df = pd.read_csv("data/breast-cancer-wisconsin.txt", na_values ='?', header=None)
     df = df.dropna(axis='index')
     print df.head()
-    print df.dtypes
 
     X = df.values[:,range(1,10)]
     y = df.values[:,10]
 
+    X = X[:, np.var(X, axis=0)>0]
+
+    X = np.apply_along_axis(lambda x: (x-min(x))/(max(x)-min(x))*2 -1, axis=0 , arr = X)
+    # X = np.apply_along_axis(lambda x: (x-np.mean(x))/np.std(x), axis=0 , arr = X)
+
+
+    # print np.apply_along_axis(lambda x: np.mean(x), axis=0 , arr = X)
+    y[y==2] = -1
+    y[y==4] = 1
+    return X, y
+
+def pima_data():
+    df = pd.read_csv("data/pima-indians-diabetes.txt")
+
+    X = df.values[:,range(0,8)]
+    y = df.values[:,8]
 
     X = X[:, np.var(X, axis=0)>0]
 
-    # X = (X - np.mean(X, axis = 0))/np.var(X, axis=0)
     X = np.apply_along_axis(lambda x: (x-min(x))/(max(x)-min(x))*2 -1, axis=0 , arr = X)
 
-    print np.apply_along_axis(lambda x: np.mean(x), axis=0 , arr = X)
+    y[y==0] = -1
+    y[y==1] = 1
+    return X, y
 
-    # y = y.values.flatten()
-    y[y==2] = -1
-    y[y==4] = 1
-    print X.shape
+if __name__ == '__main__':
+    # X = pd.read_csv('../OptimizationProject_Wei/adult_x.csv', header=None)
+    # y = pd.read_csv('../OptimizationProject_Wei/adult_y.csv', header=None)
+    X, y = pima_data()
 
     skf = StratifiedKFold(n_splits=5)
-    # print skf.split(X, y)
     
-
-
     bi_SGD = bilevel_SGD()
     bi_SGD.fit(X, y, skf)
