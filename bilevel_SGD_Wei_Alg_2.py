@@ -19,7 +19,7 @@ class bilevel_SGD_Alg2():
         self.beta = None
         self.C_min = 1e-4
         self.C_max = 1e6
-        self.t_max = 300 # maximal number of iterations
+        self.t_max = 1000 # maximal number of iterations
         self.lr_beta = 0.001 # learning rate (step size) for beta
         self.lr_C = 0.001 # learning rate for C
 
@@ -152,6 +152,8 @@ class bilevel_SGD_Alg2():
             # print self.C
             # dp.update_line(t, self.stop())
             self.accuracy_ls.append(self.stop())
+            print self.loss_upper()
+            self.loss_ls.append(self.loss_upper())
 
             t += 1
         # print 'final accuracy: ', self.stop()
@@ -159,8 +161,17 @@ class bilevel_SGD_Alg2():
 
         print 'final C: ', self.C
         print 'final cross-val accuracy: ', self.stop()
-        plt.figure()
-        plt.plot(range(0, self.t_max), self.accuracy_ls)
+
+        f, (ax1, ax2) = plt.subplots(1,2,figsize=(15,8))
+        ax1.plot(range(0, self.t_max), self.accuracy_ls)
+        ax1.set_ylabel('Accuracy')
+        ax1.set_xlabel('Iteration')
+
+        ax2.plot(range(0, self.t_max), self.loss_ls)
+        ax2.set_ylabel('Loss')
+        ax2.set_xlabel('Iteration')
+
+        f.suptitle('Pima data, Algorithm 2')
         plt.show()
 
     def stop(self):
@@ -172,6 +183,10 @@ class bilevel_SGD_Alg2():
         accuracy_v = self.accuracy(self.y_valid, pred_v)
         return accuracy_v 
 
+    def loss_upper(self):
+        
+        loss = np.sum( np.maximum(1 - np.multiply(np.dot(self.X_valid, self.beta), self.y_valid), 0))
+        return loss
 
 
     def _duality_gap(self):
@@ -224,7 +239,7 @@ def svmguide1():
 if __name__ == '__main__':
     # X = pd.read_csv('../OptimizationProject_Wei/adult_x.csv', header=None)
     # y = pd.read_csv('../OptimizationProject_Wei/adult_y.csv', header=None)
-    X, y = pima_data()
+    X, y = svmguide1()
 
     temp_ind = np.random.randint(X.shape[0], size=X.shape[0]/2)
     val_ind = list(set(range(0, X.shape[0])) - set(temp_ind))
