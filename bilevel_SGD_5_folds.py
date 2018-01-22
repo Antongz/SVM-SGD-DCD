@@ -20,7 +20,7 @@ class bilevel_SGD():
         self.C_max = 1e6
         self.t_max = 2000 # maximal number of iterations
         self.lr_beta = 0.01 # learning rate (step size) for beta
-        self.lr_C = 0.01 # learning rate for C
+        self.lr_C = 0.1 # learning rate for C
 
         self.accuracy_threshold = 0.97
 
@@ -51,7 +51,7 @@ class bilevel_SGD():
 
         t = 1
         # print self.stop()
-        dp = dynamic_plot(xlim=(0,self.t_max), ylim=(0, 1.1), xlabel = 'Iteration', ylabel = 'Accuracy')
+        dp = dynamic_plot(xlim=(0,self.t_max), ylim=(0, 1.5), xlabel = 'Iteration', ylabel = 'Accuracy')
         while (self.stop() < self.accuracy_threshold) and (t <= self.t_max):
             C_grad_ls = []
             for i, index in enumerate(self.indice_gen):
@@ -95,9 +95,11 @@ class bilevel_SGD():
             # print self.stop()
             # print self.C
 
-            dp.update_line(t, self.stop())
+            dp.update_line(t, 1- self.stop())
+
 
             t += 1
+        dp.fig.savefig('svmguide1_error_profile.png')
 
 
     def stop(self):
@@ -113,6 +115,15 @@ class bilevel_SGD():
 
             accuracy_v_ls.append(self.accuracy(y_valid, pred_v))
         return sum(accuracy_v_ls)/self.fold_num
+
+    def loss_upper(self):
+        loss = []
+        for i, index in enumerate(self.indice_gen):
+            test_index = index[1]
+            X_valid =  self.X[test_index]
+            y_valid =  self.y[test_index]
+            loss.append(np.sum( np.maximum(1 - np.multiply(np.dot(X_valid, self.beta[i,]), y_valid), 0)))
+        return sum(loss)/self.fold_num
 
 
     def _duality_gap(self):
@@ -165,10 +176,25 @@ def pima_data():
     y[y==1] = 1
     return X, y
 
+def svmguide1():
+    df = pd.read_csv("data/svmguide1.csv", header=None)
+    print df.head()
+
+    X = df.values[:,range(1,5)]
+    y = df.values[:,0]
+
+    X = X[:, np.var(X, axis=0)>0]
+
+    X = np.apply_along_axis(lambda x: (x-min(x))/(max(x)-min(x))*2 -1, axis=0 , arr = X)
+
+    y[y==0] = -1
+    y[y==1] = 1
+    return X, y
+
 if __name__ == '__main__':
     # X = pd.read_csv('../OptimizationProject_Wei/adult_x.csv', header=None)
     # y = pd.read_csv('../OptimizationProject_Wei/adult_y.csv', header=None)
-    X, y = pima_data()
+    X, y = svmguide1()
 
     skf = StratifiedKFold(n_splits=5)
     
