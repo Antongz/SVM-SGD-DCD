@@ -67,20 +67,20 @@ class bilevel_SGD():
                 X_train, X_valid = X[train_index], X[test_index]
                 y_train, y_valid = y[train_index], y[test_index]
 
-                # error_vector_t = np.multiply(y_train, np.dot(X_train, self.beta[i,]))
+                error_vector_t = np.multiply(y_train, np.dot(X_train, self.beta[i,]))
                 error_vector_v = np.multiply(y_valid, np.dot(X_valid, self.beta[i,]))
 
-                l = np.random.randint(X_train.shape[0])
+                # l = np.random.randint(X_train.shape[0])
 
-                # l = np.random.choice(np.where(error_vector_t<1)[0])
+                l = np.random.choice(np.where(error_vector_t<1)[0])
                 p = np.random.choice(np.where(error_vector_v<1)[0])
 
-                if y_train[l]*np.dot(self.beta[i, ], X_train[l,]) < 1:
-                    G_grad =  self.beta[i,] - self.C*y_train[l]*X_train[l,]
-                else:
-                    G_grad = self.beta[i,]
+                # if y_train[l]*np.dot(self.beta[i, ], X_train[l,]) < 1:
+                    # G_grad =  self.beta[i,] - self.C*y_train[l]*X_train[l,]
+                # else:
+                    # G_grad = self.beta[i,]
                 # update lower level gradient
-                # G_grad =  self.beta[i,] - self.C*y_train[l]*X_train[l,]
+                G_grad =  self.beta[i,] - self.C*y_train[l]*X_train[l,]
                 self.lr_beta = 1.0/t
                 self.beta[i,] = self.beta[i,] - self.lr_beta*G_grad
 
