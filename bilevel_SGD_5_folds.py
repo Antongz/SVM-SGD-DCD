@@ -8,6 +8,7 @@ import random as rd
 import pandas as pd
 from dynamic_plot import dynamic_plot
 from sklearn.model_selection import StratifiedKFold
+import matplotlib.pyplot as plt
 
 
 class bilevel_SGD():
@@ -19,10 +20,14 @@ class bilevel_SGD():
         self.C_min = 1e-4
         self.C_max = 1e6
         self.t_max = 2000 # maximal number of iterations
-        self.lr_beta = 0.01 # learning rate (step size) for beta
+        self.lr_beta = 0.005 # learning rate (step size) for beta
         self.lr_C = 0.1 # learning rate for C
 
         self.accuracy_threshold = 0.97
+
+        self.C_ls = []
+        self.loss_ls = []
+        self.accuracy_ls = []
 
     def fit(self, X, y, skf):
         """
@@ -51,7 +56,7 @@ class bilevel_SGD():
 
         t = 1
         # print self.stop()
-        dp = dynamic_plot(xlim=(0,self.t_max), ylim=(0, 1.5), xlabel = 'Iteration', ylabel = 'Accuracy')
+        # dp = dynamic_plot(xlim=(0,self.t_max), ylim=(0, 200), xlabel = 'Iteration', ylabel = 'Loss')
         while (self.stop() < self.accuracy_threshold) and (t <= self.t_max):
             C_grad_ls = []
             for i, index in enumerate(self.indice_gen):
@@ -62,15 +67,21 @@ class bilevel_SGD():
                 X_train, X_valid = X[train_index], X[test_index]
                 y_train, y_valid = y[train_index], y[test_index]
 
-                error_vector_t = np.multiply(y_train, np.dot(X_train, self.beta[i,]))
+                # error_vector_t = np.multiply(y_train, np.dot(X_train, self.beta[i,]))
                 error_vector_v = np.multiply(y_valid, np.dot(X_valid, self.beta[i,]))
 
-                l = np.random.choice(np.where(error_vector_t<1)[0])
+                l = np.random.randint(X_train.shape[0])
+
+                # l = np.random.choice(np.where(error_vector_t<1)[0])
                 p = np.random.choice(np.where(error_vector_v<1)[0])
 
-
+                if y_train[l]*np.dot(self.beta[i, ], X_train[l,]) < 1:
+                    G_grad =  self.beta[i,] - self.C*y_train[l]*X_train[l,]
+                else:
+                    G_grad = self.beta[i,]
                 # update lower level gradient
-                G_grad =  self.beta[i,] - self.C*y_train[l]*X_train[l,]
+                # G_grad =  self.beta[i,] - self.C*y_train[l]*X_train[l,]
+                self.lr_beta = 1.0/t
                 self.beta[i,] = self.beta[i,] - self.lr_beta*G_grad
 
                 # update upper level gradient
@@ -94,12 +105,34 @@ class bilevel_SGD():
 
             # print self.stop()
             # print self.C
+            self.C_ls.append(self.C)
+            self.loss_ls.append(self.loss_upper())
+            self.accuracy_ls.append(self.stop())
 
-            dp.update_line(t, 1- self.stop())
+
+            # dp.update_line(t, self.loss_upper())
 
 
             t += 1
-        dp.fig.savefig('svmguide1_error_profile.png')
+        # dp.fig.savefig('pima_loss_profile_stepC_1_stepW_0.001.png')
+
+        print 'final C: ', self.C
+        print 'final cross-val accuracy: ', self.stop()
+        
+        f, (ax1, ax2, ax3) = plt.subplots(1,3,figsize=(18,8))
+        ax1.plot(range(0, self.t_max), self.accuracy_ls)
+        ax1.set_ylabel('Accuracy')
+        ax1.set_xlabel('Iteration')
+
+        ax2.plot(range(0, self.t_max), self.loss_ls)
+        ax2.set_ylabel('Loss')
+        ax2.set_xlabel('Iteration')
+
+        ax3.plot(self.C_ls, self.loss_ls,'*-')
+        ax3.set_ylabel('Loss')
+        ax3.set_xlabel('C')
+        f.suptitle('SVMGUIDE1 data, bilevel SGD')
+        plt.show()
 
 
     def stop(self):
@@ -178,7 +211,7 @@ def pima_data():
 
 def svmguide1():
     df = pd.read_csv("data/svmguide1.csv", header=None)
-    print df.head()
+    # print df.head()
 
     X = df.values[:,range(1,5)]
     y = df.values[:,0]
