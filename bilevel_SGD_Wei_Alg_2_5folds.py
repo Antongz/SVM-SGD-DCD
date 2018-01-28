@@ -9,6 +9,7 @@ import pandas as pd
 from dynamic_plot import dynamic_plot
 import matplotlib.pyplot as plt
 from sklearn.model_selection import StratifiedKFold
+from data_example import *
 
 
 
@@ -20,9 +21,9 @@ class bilevel_SGD_Alg2_5folds():
         self.beta = None
         self.C_min = 1e-4
         self.C_max = 1e6
-        self.t_max = 200 # maximal number of iterations
+        self.t_max = 20 # maximal number of iterations
         self.lr_beta = 0.001 # learning rate (step size) for beta
-        self.lr_C = 0.0001 # learning rate for C
+        self.lr_C = 0.00001 # learning rate for C
 
         self.accuracy_threshold = 0.97
 
@@ -49,11 +50,10 @@ class bilevel_SGD_Alg2_5folds():
                 Gradient = y_train[ind]* np.dot(self.beta[fold_i,], X_train[ind,]) - 1
 
                 # print self.Gradient[ind]
-                print 'check', temp_alpha, self.C
                 if temp_alpha == 0:
                     # print 'check'
                     Proj_grad = min(Gradient, 0)
-                elif temp_alpha == self.C:
+                elif temp_alpha >= self.C:
                     Proj_grad = max(Gradient, 0)
                 elif 0 < temp_alpha < self.C:
                     Proj_grad = Gradient
@@ -191,19 +191,21 @@ class bilevel_SGD_Alg2_5folds():
         print 'final C: ', self.C
         print 'final cross-val accuracy: ', self.stop()
 
-        # f, (ax1, ax2, ax3) = plt.subplots(1,3,figsize=(18,8))
-        # ax1.plot(range(0, self.t_max), self.accuracy_ls)
-        # ax1.set_ylabel('Accuracy')
-        # ax1.set_xlabel('Iteration')
+        f, (ax1, ax2, ax3) = plt.subplots(1,3,figsize=(18,8))
+        ax1.plot(range(0, self.t_max), self.accuracy_ls)
+        ax1.set_ylabel('Accuracy')
+        ax1.set_ylim((0.5,1))
+        ax1.set_xlabel('Iteration')
 
-        # ax2.plot(range(0, self.t_max), self.loss_ls)
-        # ax2.set_ylabel('Loss')
-        # ax2.set_xlabel('Iteration')
+        ax2.plot(range(0, self.t_max), self.loss_ls)
+        ax2.set_ylabel('Loss')
+        ax2.set_xlabel('Iteration')
 
-        # ax3.plot(self.C_ls, self.loss_ls,'*-')
-        # ax3.set_ylabel('Loss')
-        # ax3.set_xlabel('C')
-        # f.suptitle('SVMGUIDE1 data, Algorithm 2')
+        ax3.plot(self.C_ls, self.loss_ls,'*-')
+        ax3.set_ylabel('Loss')
+        ax3.set_xlabel('C')
+        f.suptitle('Magic04 data, Algorithm 2')
+        plt.savefig("Figures/Alg2_magic04_mu_%2.1f_alpha_%5.4f_step_decay.png" % (self.mu, self.lr_C), dpi=1000)
         # plt.show()
 
     def stop(self):
@@ -247,40 +249,11 @@ class bilevel_SGD_Alg2_5folds():
 
         return sum(y_true==y_pred)*1.0/len(y_true)
 
-def pima_data():
-    df = pd.read_csv("data/pima-indians-diabetes.txt")
-
-    X = df.values[:,range(0,8)]
-    y = df.values[:,8]
-
-    X = X[:, np.var(X, axis=0)>0]
-
-    X = np.apply_along_axis(lambda x: (x-min(x))/(max(x)-min(x))*2 -1, axis=0 , arr = X)
-
-    y[y==0] = -1
-    y[y==1] = 1
-    return X, y
-
-def svmguide1():
-    df = pd.read_csv("data/svmguide1.csv", header=None)
-    # print df.head()
-
-    X = df.values[:,range(1,5)]
-    y = df.values[:,0]
-
-    X = X[:, np.var(X, axis=0)>0]
-
-    X = np.apply_along_axis(lambda x: (x-min(x))/(max(x)-min(x))*2 -1, axis=0 , arr = X)
-
-    y[y==0] = -1
-    y[y==1] = 1
-    return X, y
-
 
 if __name__ == '__main__':
     # X = pd.read_csv('../OptimizationProject_Wei/adult_x.csv', header=None)
     # y = pd.read_csv('../OptimizationProject_Wei/adult_y.csv', header=None)
-    X, y = svmguide1()
+    X, y = magic04()
 
 
     skf = StratifiedKFold(n_splits=5)
