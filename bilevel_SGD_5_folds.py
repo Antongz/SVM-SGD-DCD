@@ -39,6 +39,7 @@ class bilevel_SGD():
         """
 
         ## initialize parameters
+        X = np.c_[ X, np.ones(X.shape[0]) ] # add a constant column for intercept
         self.X = X
         self.y = y
         train_ind_ls = []

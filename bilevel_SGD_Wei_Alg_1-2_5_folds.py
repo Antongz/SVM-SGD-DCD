@@ -14,7 +14,9 @@ from data_example import *
 matplotlib.rcParams.update({'font.size': 22})
 from bilevel_SGD_5_folds import bilevel_SGD
 import time
-
+from sklearn.svm import LinearSVC
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import GridSearchCV
 
 class bilevel_SGD_Alg1_5folds():
 
@@ -49,6 +51,7 @@ class bilevel_SGD_Alg1_5folds():
         if not self._check_optimality('duality_gap', fold_i, X_train, y_train): # if alpha is not optimal
             ind_permuted = np.random.permutation(X_train.shape[0])
             for ind in ind_permuted:
+                # ind = np.random.randint(X_train.shape[0])
                 temp_alpha = self.alpha[fold_i][ind]
                 Gradient = y_train[ind]* np.dot(self.beta[fold_i,], X_train[ind,]) - 1
 
@@ -105,8 +108,10 @@ class bilevel_SGD_Alg1_5folds():
         """
 
         ## initialize parameters
+        X = np.c_[ X, np.ones(X.shape[0]) ] # add a constant column for intercept
         self.X = X
         self.y = y
+
         train_ind_ls = []
         test_ind_ls = []
         for train_ind, test_ind in skf.split(X, y):
@@ -116,7 +121,7 @@ class bilevel_SGD_Alg1_5folds():
         # print(self.indice_gen)
 
         self.C = self.C_min
-        feature_size = X.shape[1]
+        feature_size = self.X.shape[1]
         self.fold_num = skf.get_n_splits()
 
         # initialize for dual CD step
@@ -300,7 +305,8 @@ def plot_result(t, accuracy_ls_1, loss_ls_1, C_ls_1, accuracy_ls_2, loss_ls_2, C
 if __name__ == '__main__':
     # X = pd.read_csv('../OptimizationProject_Wei/adult_x.csv', header=None)
     # y = pd.read_csv('../OptimizationProject_Wei/adult_y.csv', header=None)
-    X, y = svmguide1()
+    X, y = pima_data()
+    print(X.shape)
     np.random.seed(1)
 
     skf = StratifiedKFold(n_splits=5, shuffle=True)
@@ -322,5 +328,18 @@ if __name__ == '__main__':
     print(len(accuracy_ls_1), 'length')
     tm1 = time.time()
     print('running time:', tm1-tm0)
+
+    parameters = { 'C':[1e-4, 0.1, 1, 10, 100, 1e6, bi_SGD.C, SGD.C]}
+    svc = LinearSVC(random_state=0, loss='hinge', max_iter=150, tol=1e-5, fit_intercept=True)
+    clf = GridSearchCV(svc, parameters, cv=5, scoring='accuracy', refit='False')
+    tm0 = time.time()
+    clf.fit(X, y)
+    tm1 = time.time()
+
+    print('\n sklearn GridSearchCV:')
+    print('best CV score:', clf.best_score_)
+    print('best hyperparameter:', clf.best_params_)
+    print('running time:', tm1-tm0)
+    print(clf.cv_results_['mean_test_score'])
 
     plot_result(t1, accuracy_ls_1, loss_ls_1, C_ls_1, accuracy_ls_2, loss_ls_2, C_ls_2, 'Real Sim Data')
