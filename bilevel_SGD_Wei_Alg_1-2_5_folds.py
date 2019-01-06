@@ -29,8 +29,9 @@ class bilevel_SGD_Alg1_5folds():
         self.t_max = 200 # maximal number of iterations
         self.lr_beta = 0.001 # learning rate (step size) for beta
         self.lr_C = 0.001 # learning rate for C
+        self.batch_size = 10
 
-        self.accuracy_threshold = 0.97
+        self.accuracy_threshold = 0.98
 
         self.duality_gap_tol = 1e-3
         self.C_ls = []
@@ -172,12 +173,14 @@ class bilevel_SGD_Alg1_5folds():
                 J_alpha = (self.alpha[i] >= self.C)
 
                 if any(J_alpha):
-                    p = np.random.choice(np.where(error_vector_v<1)[0])
+                    wrong_pred = np.where(error_vector_v<1)[0]
+                    p = np.random.choice(wrong_pred, min(self.batch_size, len(wrong_pred)), replace=False)
                     # ind_p = np.where(error_vector_v<1)[0]
 
                     # update upper level gradient
                     # C_grad = - np.dot(y_valid[p]*X_valid[p,], np.dot(self.M, J_alpha))
-                    C_grad_ls.append(-np.dot(np.dot(y_valid[p], X_valid[p,]), np.dot(self.M_ii[i], J_alpha)))
+                    gradient_alpha = np.mean(-np.dot(np.dot(np.diag(y_valid[p]), X_valid[p,]), np.dot(self.M_ii[i], J_alpha)))
+                    C_grad_ls.append(gradient_alpha)
 
             if C_grad_ls:
                 C_grad = sum(C_grad_ls)/self.fold_num
@@ -308,11 +311,12 @@ if __name__ == '__main__':
     X, y = svmguide1()
     print(X.shape)
     np.random.seed(1)
+    num_iter = 200
 
     skf = StratifiedKFold(n_splits=5, shuffle=True)
     print('Bilevel SGD:')
     SGD = bilevel_SGD()
-    SGD.t_max = 150
+    SGD.t_max = num_iter
     tm2 = time.time()
     t2,accuracy_ls_2, loss_ls_2, C_ls_2 = SGD.fit(X, y, skf)
     # print C_ls_2
@@ -322,18 +326,19 @@ if __name__ == '__main__':
 
     print('\n SGD+DCD:')
     bi_SGD = bilevel_SGD_Alg1_5folds()
-    bi_SGD.t_max = 150
+    bi_SGD.t_max = num_iter
     tm0 = time.time()
     t1,accuracy_ls_1, loss_ls_1, C_ls_1 = bi_SGD.fit(X, y, skf)
     print(len(accuracy_ls_1), 'length')
     tm1 = time.time()
     print('running time:', tm1-tm0)
+    print(loss_ls_1)
 
-    plot_result(t1, accuracy_ls_1, loss_ls_1, C_ls_1, accuracy_ls_2, loss_ls_2, C_ls_2, 'svmguide1 Sim Data')
+    plot_result(t1, accuracy_ls_1, loss_ls_1, C_ls_1, accuracy_ls_2, loss_ls_2, C_ls_2, 'svmguide1 Data')
 
 
     parameters = { 'C':[1e-4, 0.1, 1, 10, 100, 1e6, bi_SGD.C, SGD.C]}
-    svc = LinearSVC(random_state=0, loss='hinge', max_iter=150, tol=1e-5, fit_intercept=True)
+    svc = LinearSVC(random_state=0, loss='hinge', max_iter=num_iter, tol=1e-5, fit_intercept=True)
     clf = GridSearchCV(svc, parameters, cv=5, scoring='accuracy', refit='False')
     tm0 = time.time()
     clf.fit(X, y)
