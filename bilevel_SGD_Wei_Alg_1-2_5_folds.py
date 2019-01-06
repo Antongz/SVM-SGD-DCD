@@ -185,15 +185,15 @@ class bilevel_SGD_Alg1_5folds():
 
                 # print C_grad
                 if C_grad !=0:
-                    self.lr_C = 1/np.absolute(t*np.sqrt(feature_size)*C_grad)
+                    # self.lr_C = 1/np.absolute(t*np.sqrt(feature_size)*C_grad)
                 # self.lr_c = 1.0/t
                 # self.lr_C = 1/np.absolute(t*np.sqrt(feature_size))
 
-                    self.C = self.C - self.lr_C*C_grad
+                    # self.C = self.C - self.lr_C*C_grad
 
                 # # momentum update
-                # v = self.mu*v - self.lr_C * C_grad
-                # self.C += v
+                    v = self.mu*v - self.lr_C * C_grad
+                    self.C += v
 
 
                 if self.C < self.C_min:
@@ -285,7 +285,7 @@ def plot_result(t, accuracy_ls_1, loss_ls_1, C_ls_1, accuracy_ls_2, loss_ls_2, C
            ncol=1,  fancybox=True, fontsize=16,  bbox_to_anchor=(0.8,0.99))
     plt.subplots_adjust(left=0.1, bottom=0.1, right=0.98, top=0.85,
                 wspace=0.25, hspace=None)
-    # plt.savefig('C:/Users/wjian/Dropbox/phd_research/svm_hyper_parameter_optimization/Code_Gradient_Method/Algorithm1-2/'+title+'.png',dpi=1000)
+    plt.savefig('Algorithm1-2/'+title+'.png',dpi=1000)
     plt.show()
 
     plt.figure(figsize=(10,8))
@@ -298,14 +298,14 @@ def plot_result(t, accuracy_ls_1, loss_ls_1, C_ls_1, accuracy_ls_2, loss_ls_2, C
     plt.xlabel('Iteration')
     plt.ylabel('C')
     plt.title(title)
-    # plt.savefig('C:/Users/wjian/Dropbox/phd_research/svm_hyper_parameter_optimization/Code_Gradient_Method/Algorithm1-2/C_profile_'+title+'.png',dpi=1000)
+    plt.savefig('Algorithm1-2/C_profile_'+title+'.png',dpi=1000)
     plt.show()
 
 
 if __name__ == '__main__':
     # X = pd.read_csv('../OptimizationProject_Wei/adult_x.csv', header=None)
     # y = pd.read_csv('../OptimizationProject_Wei/adult_y.csv', header=None)
-    X, y = pima_data()
+    X, y = svmguide1()
     print(X.shape)
     np.random.seed(1)
 
@@ -329,6 +329,9 @@ if __name__ == '__main__':
     tm1 = time.time()
     print('running time:', tm1-tm0)
 
+    plot_result(t1, accuracy_ls_1, loss_ls_1, C_ls_1, accuracy_ls_2, loss_ls_2, C_ls_2, 'svmguide1 Sim Data')
+
+
     parameters = { 'C':[1e-4, 0.1, 1, 10, 100, 1e6, bi_SGD.C, SGD.C]}
     svc = LinearSVC(random_state=0, loss='hinge', max_iter=150, tol=1e-5, fit_intercept=True)
     clf = GridSearchCV(svc, parameters, cv=5, scoring='accuracy', refit='False')
@@ -340,6 +343,6 @@ if __name__ == '__main__':
     print('best CV score:', clf.best_score_)
     print('best hyperparameter:', clf.best_params_)
     print('running time:', tm1-tm0)
+    print(clf.cv_results_['params'])
     print(clf.cv_results_['mean_test_score'])
 
-    plot_result(t1, accuracy_ls_1, loss_ls_1, C_ls_1, accuracy_ls_2, loss_ls_2, C_ls_2, 'Real Sim Data')
