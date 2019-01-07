@@ -68,7 +68,6 @@ class bilevel_SGD_Alg1_5folds():
                     print('temp_alpha: ', temp_alpha, 'C: ', self.C)
 
 
-
                 if not np.isclose(Proj_grad, 1e-9):
                     self.alpha[fold_i][ind] = min(max(temp_alpha - Gradient / self.Q_ii[fold_i][ind], 0), self.C)
                     self.beta[fold_i,] = self.beta[fold_i,] + y_train[ind]*(self.alpha[fold_i][ind] - temp_alpha)*X_train[ind,]
@@ -152,9 +151,7 @@ class bilevel_SGD_Alg1_5folds():
         while (self.stop() < self.accuracy_threshold) and (t <= self.t_max):
 
             ############# Record loss metric, and C ########################
-            self.accuracy_ls.append(self.stop())
             self.C_ls.append(self.C)
-            self.loss_ls.append(self.loss_upper())
 
             C_grad_ls = []
             for i, index in enumerate(self.indice_gen):
@@ -182,6 +179,10 @@ class bilevel_SGD_Alg1_5folds():
                     # C_grad = - np.dot(y_valid[p]*X_valid[p,], np.dot(self.M, J_alpha))
                     gradient_alpha = np.mean(-np.dot(np.dot(np.diag(y_valid[p]), X_valid[p,]), np.dot(self.M_ii[i], J_alpha)))
                     C_grad_ls.append(gradient_alpha)
+            
+            ############# Record loss metric ########################
+            self.accuracy_ls.append(self.stop())
+            self.loss_ls.append(self.loss_upper())
 
             if C_grad_ls:
                 C_grad = sum(C_grad_ls)/self.fold_num
@@ -208,9 +209,8 @@ class bilevel_SGD_Alg1_5folds():
             # print self.C
             # dp.update_line(t, self.stop())
             
-
             t += 1
-        print('final C: ', self.C)
+        print('final C: ', self.C_ls[-1])
         print('final cross-val accuracy: ', self.stop())
         # print 't2: ', t2
 
