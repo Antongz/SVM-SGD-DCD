@@ -100,7 +100,7 @@ class bilevel_SGD_Alg1_5folds():
             else:
                 return False
 
-    def fit(self, X, y, skf):
+    def fit(self, X, y, skf, fit_intercept=False):
         """
         params:
             X: array, data, each row is a sample
@@ -109,7 +109,8 @@ class bilevel_SGD_Alg1_5folds():
         """
 
         ## initialize parameters
-        X = np.c_[ X, np.ones(X.shape[0]) ] # add a constant column for intercept
+        if fit_intercept:
+            X = np.c_[ X, np.ones(X.shape[0]) ] # add a constant column for intercept
         self.X = X
         self.y = y
 
@@ -144,8 +145,8 @@ class bilevel_SGD_Alg1_5folds():
             self.beta[i,] = np.dot(np.multiply(self.alpha[i], y_train), X_train)
 
         t = 1
-        v = 0 # momentum update
-        self.mu = 0.5
+        self.v = 0 # momentum update
+        self.mu = 0.9
         t2 = 1
 
         while (self.stop() < self.accuracy_threshold) and (t <= self.t_max):
@@ -189,14 +190,11 @@ class bilevel_SGD_Alg1_5folds():
                 # print C_grad
                 if C_grad !=0:
                     # self.lr_C = 1/np.absolute(t*np.sqrt(feature_size)*C_grad)
-                # self.lr_c = 1.0/t
-                # self.lr_C = 1/np.absolute(t*np.sqrt(feature_size))
+                    # self.lr_C = 1/np.absolute(t*np.sqrt(feature_size))
 
-                    # self.C = self.C - self.lr_C*C_grad
-
-                # # momentum update
-                    v = self.mu*v - self.lr_C * C_grad
-                    self.C += v
+                    # self._gradient_update(method='fixed_step')
+                    # momentum update
+                    self._gradient_update(method='momentum', C_grad=C_grad)
 
 
                 if self.C < self.C_min:
@@ -217,6 +215,22 @@ class bilevel_SGD_Alg1_5folds():
         # print 't2: ', t2
 
         return t, self.accuracy_ls, self.loss_ls, self.C_ls
+
+    def _gradient_update(self, method, C_grad=None, t=1):
+        '''
+        Different gradient update strategy for hyperparameter C
+        '''
+        if method == 'momentum':
+            
+            # momentum update
+            self.v = self.mu*self.v - self.lr_C * C_grad
+            self.C += self.v
+        elif method == 'simple': # simply SGD
+            self.lr_c = 1.0/t
+            self.C = self.C - self.lr_C*C_grad
+        elif method == 'fixed_step': # deterministic increase of hyperparameter C
+            self.C = self.C*1.1
+
 
     def stop(self):
         """
@@ -311,7 +325,7 @@ if __name__ == '__main__':
     X, y = svmguide1()
     print(X.shape)
     np.random.seed(1)
-    num_iter = 200
+    num_iter = 150
 
     skf = StratifiedKFold(n_splits=5, shuffle=True)
     print('Bilevel SGD:')
@@ -332,12 +346,13 @@ if __name__ == '__main__':
     print(len(accuracy_ls_1), 'length')
     tm1 = time.time()
     print('running time:', tm1-tm0)
-    print(loss_ls_1)
+    # print(loss_ls_1)
 
-    plot_result(t1, accuracy_ls_1, loss_ls_1, C_ls_1, accuracy_ls_2, loss_ls_2, C_ls_2, 'svmguide1 Data')
+    plot_result(t1, accuracy_ls_1, loss_ls_1, C_ls_1, accuracy_ls_2, loss_ls_2, C_ls_2, 'svmguide1 Data mu 0.9')
 
 
-    parameters = { 'C':[1e-4, 0.1, 1, 10, 100, 1e6, bi_SGD.C, SGD.C]}
+    # parameters = { 'C':[1e-4, 0.1, 1, 10, 100, 1e6, bi_SGD.C, SGD.C]}
+    parameters = {'C':[bi_SGD.C_min*10**i for i in range(8)]}
     svc = LinearSVC(random_state=0, loss='hinge', max_iter=num_iter, tol=1e-5, fit_intercept=True)
     clf = GridSearchCV(svc, parameters, cv=5, scoring='accuracy', refit='False')
     tm0 = time.time()
