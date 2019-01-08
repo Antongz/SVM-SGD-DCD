@@ -145,7 +145,7 @@ class bilevel_SGD_Alg1_5folds():
 
         t = 1
         self.v = 0 # momentum update
-        self.mu = 0.9
+        self.mu = 0.5
         t2 = 1
 
         while (self.stop() < self.accuracy_threshold) and (t <= self.t_max):
@@ -342,7 +342,7 @@ if __name__ == '__main__':
     bi_SGD = bilevel_SGD_Alg1_5folds()
     bi_SGD.t_max = num_iter
     tm0 = time.time()
-    t1,accuracy_ls_1, loss_ls_1, C_ls_1 = bi_SGD.fit(X, y, skf)
+    t1,accuracy_ls_1, loss_ls_1, C_ls_1 = bi_SGD.fit(X, y, skf,fit_intercept=True)
     print(len(accuracy_ls_1), 'length')
     tm1 = time.time()
     print('running time:', tm1-tm0)

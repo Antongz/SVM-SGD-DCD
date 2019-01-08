@@ -22,7 +22,7 @@ class bilevel_SGD():
         self.C_max = 1e6
         self.t_max = 200 # maximal number of iterations
         self.lr_beta = 0.001 # learning rate (step size) for beta
-        self.lr_C = 0.0005 # learning rate for C
+        self.lr_C = 0.01 # learning rate for C
 
         self.accuracy_threshold = 0.97
 
