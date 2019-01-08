@@ -3,3 +3,5 @@ This repo optimizes the hyper-parameter of linear SVM combining stochastic desce
 
 The main algorithm is implemented in script bilevel_SVM_SGD_DCD_5_folds.py.
 
+Detail about the algorithm can be found in the manuscript draft (the pdf file in this repo).
+
